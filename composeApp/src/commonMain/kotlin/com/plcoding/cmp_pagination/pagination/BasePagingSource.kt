@@ -8,9 +8,9 @@ abstract class BasePagingSource<T : Any> : PagingSource<Int, T>() {
 
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, T> {
         return try {
-            val page = params.key ?: 1
+            val page = params.key ?: FIRST_PAGE
             val fetchResponse = onFetchPage(pageNumber = page)
-            val isFirstPage = fetchResponse.currentPage == 1
+            val isFirstPage = fetchResponse.currentPage == FIRST_PAGE
             val isLastPage = fetchResponse.totalPages == page || fetchResponse.items.isEmpty()
 
             LoadResult.Page(
@@ -27,6 +27,7 @@ abstract class BasePagingSource<T : Any> : PagingSource<Int, T>() {
 
     companion object {
         const val PAGING_PAGE_SIZE = 10
+        const val FIRST_PAGE = 1
     }
 }
 

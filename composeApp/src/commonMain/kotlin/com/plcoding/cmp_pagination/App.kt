@@ -1,5 +1,6 @@
 package com.plcoding.cmp_pagination
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,20 +16,17 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.plcoding.cmp_pagination.pagination.PagingData
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.launch
-import org.jetbrains.compose.ui.tooling.preview.Preview
 
-@Preview
 @Composable
 fun App() {
     MaterialTheme {
@@ -42,12 +40,24 @@ fun App() {
         val state by viewModel.state.collectAsStateWithLifecycle()
 
         Scaffold(
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier
+                .fillMaxSize()
         ) { contentPadding ->
-            PaginatedList(
-                state = state.movies,
+            val lazyListState = rememberLazyListState()
+
+            lazyListState.LoadMoreOnScroll(
+                hasMore = state.movies.hasMore,
+                isLoading = state.movies.isLoading,
                 loadNextPage = { viewModel.loadNextPage() },
-                itemContent = { movie ->
+            )
+
+            LazyColumn(
+                state = lazyListState,
+                modifier = Modifier
+                    .fillMaxSize(),
+                contentPadding = contentPadding
+            ) {
+                items(state.movies.items) { movie ->
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -63,54 +73,44 @@ fun App() {
                         )
                     }
                 }
-            )
-        }
-    }
-}
 
-@Composable
-fun <T : Any> PaginatedList(
-    state: PagingData<T>,
-    listState: LazyListState = rememberLazyListState(),
-    loadNextPage: () -> Unit,
-    itemContent: @Composable (T) -> Unit
-) {
-    LazyColumn(state = listState) {
-        items(state.items) { item ->
-            itemContent(item)
-        }
-
-        if (state.isLoading) {
-            item {
-                CircularProgressIndicator(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                )
+                if(state.movies.isLoading) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
+                        }
+                    }
+                }
             }
         }
     }
-
-    listState.OnLoadMore {
-        if (state.hasMore && !state.isLoading) loadNextPage()
-    }
 }
 
+
+
 @Composable
-fun LazyListState.OnLoadMore(
-    buffer: Int = 3,
-    onLoadMore: () -> Unit
+fun  LazyListState.LoadMoreOnScroll(
+    hasMore: Boolean,
+    isLoading: Boolean,
+    loadNextPage: suspend () -> Unit,
+    buffer: Int = 0
 ) {
-    val scope = rememberCoroutineScope()
-    scope.launch {
+    LaunchedEffect(this) {
         snapshotFlow {
-            val total = layoutInfo.totalItemsCount
-            val lastVisible = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-            lastVisible >= total - buffer
+            val layoutInfo = this@LoadMoreOnScroll.layoutInfo
+            val totalItems = layoutInfo.totalItemsCount
+            val lastVisibleIndex = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+            lastVisibleIndex >= totalItems - buffer
         }
             .distinctUntilChanged()
             .collect { shouldLoadMore ->
-                if (shouldLoadMore) onLoadMore()
+                if (shouldLoadMore && hasMore && !isLoading) {
+                    loadNextPage()
+                }
             }
     }
 }
