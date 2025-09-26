@@ -6,7 +6,6 @@ import io.ktor.client.request.get
 import io.ktor.client.request.parameter
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlin.coroutines.coroutineContext
 
@@ -14,21 +13,25 @@ class ProductsApi(
     private val httpClient: HttpClient
 ) {
 
+    private companion object {
+        const val API_KEY = "95e37f29931c77230c50c9fd824782b1"
+        const val BASE_URL = "https://api.themoviedb.org/3"
+    }
+
     suspend fun getProducts(
-        page: Int = 0,
-        pageSize: Int = 10
-    ): Result<ProductResponseDto> {
-        delay(2000L)
+        page: Int = 1,
+    ): Result<MovieResponse> {
         val body = try {
             val response = httpClient.get(
-                urlString = "https://dummyjson.com/products?select=title,price"
+                urlString = "$BASE_URL/trending/movie/day"
             ) {
                 contentType(ContentType.Application.Json)
-                parameter("limit", pageSize)
-                parameter("skip", page * pageSize)
+                parameter("api_key", API_KEY)
+                parameter("page", page)
+                parameter("language", "en-US")
             }
 
-            response.body<ProductResponseDto>()
+            response.body<MovieResponse>()
         } catch(e: Exception) {
             coroutineContext.ensureActive()
             return Result.failure(e)

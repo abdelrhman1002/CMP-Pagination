@@ -1,65 +1,67 @@
 package com.plcoding.cmp_pagination
 
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
+import com.plcoding.cmp_pagination.pagination.PagedFetchResponse
+import com.plcoding.cmp_pagination.pagination.createPagingSource
 import kotlinx.coroutines.launch
 
 data class ProductsState(
-    val products: List<ProductDto> = emptyList(),
-    val isLoadingMore: Boolean = false,
-    val error: String? = null
+    val movies: List<MovieEntity> = emptyList(),
+    val isLoading: Boolean = false,
+    val error: String? = null,
+    val hasMore: Boolean = true
 )
 
 class ProductsViewModel(
-    private val api: ProductsApi
-): ViewModel() {
+    private val getAllProductsUseCase: GetAllProductsUseCase
+) : BaseViewModel<ProductsState, ProductsEffect>(
+    initialState = ProductsState()
+) {
 
-    private val _state = MutableStateFlow(ProductsState())
-    val state = _state.asStateFlow()
-
-    private val pageSize = 10
-    private val paginator = Paginator<Int, ProductResponseDto>(
-        initialKey = 0,
-        onLoadUpdated = { isLoading ->
-            _state.update { it.copy(
-                isLoadingMore = isLoading
-            ) }
-        },
-        onRequest = { currentPage ->
-            api.getProducts(
-                page = currentPage,
-                pageSize = pageSize
-            )
-        },
-        getNextKey = { currentPage, _ ->
-            currentPage + 1
-        },
-        onError = { throwable ->
-            _state.update { it.copy(
-                error = throwable?.message
-            ) }
-        },
-        onSuccess = { productsResponse, nextPage ->
-            _state.update { it.copy(
-                products = it.products + productsResponse.products,
-                error = null
-            ) }
-        },
-        endReached = { currentPage, response ->
-            (currentPage * pageSize) >= response.total
-        }
-    )
+    private val pager = createPagingSource { pageNumber ->
+        val response = getAllProductsUseCase(pageNumber)
+        PagedFetchResponse(
+            items = response.movieDetailApi,
+            currentPage = pageNumber,
+            totalPages = response.totalPages,
+        )
+    }
 
     init {
-        loadNextItems()
+        loadMovies()
     }
 
-    fun loadNextItems() {
+    fun loadMovies() {
+        tryToCollect(
+            block = { pager.flow },
+            onCollect = { pagingData ->
+                updateState {
+                    copy(
+                        movies = pagingData.items,
+                        isLoading = pagingData.isLoading,
+                        error = pagingData.error?.message,
+                    )
+                }
+            },
+            onError = { exception ->
+                updateState {
+                    copy(
+                        error = exception.message,
+                        isLoading = false
+                    )
+                }
+            }
+        )
+    }
+
+    fun loadNextPage() {
         viewModelScope.launch {
-            paginator.loadNextItems()
+            pager.load()
         }
     }
+}
+
+sealed class ProductsEffect {
+    object NavigateToAddDukanScreen : ProductsEffect()
+    object NavigateToPendingDukanScreen : ProductsEffect()
 }
