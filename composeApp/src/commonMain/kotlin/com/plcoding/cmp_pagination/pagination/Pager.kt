@@ -32,11 +32,9 @@ class Pager<Key : Any, Value : Any>(
             when (val result = pagingSource.load(params)) {
                 is PagingSource.LoadResult.Page -> {
                     val isRefresh = key == null && currentKey == null
-                    val newItems = if (isRefresh) {
-                        result.data
-                    } else {
-                        _flow.value.items + result.data
-                    }
+
+                    val newItems = if (isRefresh) result.data
+                    else _flow.value.items + result.data
 
                     currentKey = result.nextKey
 

@@ -1,7 +1,5 @@
 package com.plcoding.cmp_pagination.pagination
 
-import kotlinx.coroutines.flow.Flow
-
 abstract class BasePagingSource<T : Any> : PagingSource<Int, T>() {
 
     override fun getRefreshKey(state: PagingData<T>): Int? {
@@ -38,7 +36,8 @@ fun <T : Any> createPagingSource(
     return Pager(
         config = PagingConfig(
             pageSize = BasePagingSource.PAGING_PAGE_SIZE,
-            enablePlaceholders = false
+            enablePlaceholders = false,
+            prefetchDistance = 3
         ),
         pagingSourceFactory = {
             object : BasePagingSource<T>() {

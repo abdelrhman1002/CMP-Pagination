@@ -2,14 +2,12 @@ package com.plcoding.cmp_pagination
 
 import androidx.lifecycle.viewModelScope
 import com.plcoding.cmp_pagination.pagination.PagedFetchResponse
+import com.plcoding.cmp_pagination.pagination.PagingData
 import com.plcoding.cmp_pagination.pagination.createPagingSource
 import kotlinx.coroutines.launch
 
 data class ProductsState(
-    val movies: List<MovieEntity> = emptyList(),
-    val isLoading: Boolean = false,
-    val error: String? = null,
-    val hasMore: Boolean = true
+    val movies : PagingData<MovieEntity> = PagingData(),
 )
 
 class ProductsViewModel(
@@ -37,17 +35,16 @@ class ProductsViewModel(
             onCollect = { pagingData ->
                 updateState {
                     copy(
-                        movies = pagingData.items,
-                        isLoading = pagingData.isLoading,
-                        error = pagingData.error?.message,
+                        movies = pagingData,
                     )
                 }
             },
             onError = { exception ->
                 updateState {
                     copy(
-                        error = exception.message,
-                        isLoading = false
+                        movies = movies.copy(
+                            error = exception
+                        )
                     )
                 }
             }
