@@ -55,48 +55,77 @@ fun App() {
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = contentPadding
             ) {
-                itemsIndexed(state.movies.items) { index  , movie->
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp)
-                    ) {
-                        Text(
-                            text = movie.releaseDate,
-                            fontSize = 18.sp
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
+                // Show initial loading state
+                if (state.movies.items.isEmpty() && state.movies.isLoading) {
+                    item {
+                        Box(
+                            modifier = Modifier.fillMaxWidth().height(200.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
+                        }
+                    }
+                } else {
+                    itemsIndexed(state.movies.items) { index, movie ->
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp)
                         ) {
                             Text(
-                                text = "Items: ${state.movies.items.size - index}"
+                                text = movie.name,
+                                fontSize = 18.sp
                             )
-                            Text(
-                                text = "Items: $index"
-                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = "Total Items: ${state.movies.items.size}"
+                                )
+                                Text(
+                                    text = "Index: $index"
+                                )
+                            }
+                        }
+                    }
+
+                    if (state.movies.isLoading && state.movies.items.isNotEmpty()) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator()
+                            }
                         }
                     }
                 }
 
-                if (state.movies.isLoading) {
+                // Show error state
+                state.movies.error?.let { error ->
                     item {
                         Box(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            CircularProgressIndicator()
+                            Text(
+                                text = "Error: ${error.message}",
+                                color = MaterialTheme.colorScheme.error
+                            )
                         }
                     }
                 }
             }
         }
     }
-
 }
-
 
 @Composable
 fun <T : Any> LazyListState.LoadMoreOnScroll(
@@ -110,8 +139,7 @@ fun <T : Any> LazyListState.LoadMoreOnScroll(
             val lastVisibleItemIndex = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
 
             lastVisibleItemIndex to totalItems
-        }
-            .distinctUntilChanged()
+        }.distinctUntilChanged()
             .collect { (lastVisible, total) ->
                 if (pager.shouldLoadMore(lastVisible, total)) {
                     loadNextPage()

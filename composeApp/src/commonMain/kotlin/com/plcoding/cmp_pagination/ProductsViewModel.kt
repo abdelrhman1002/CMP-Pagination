@@ -7,7 +7,7 @@ import com.plcoding.cmp_pagination.pagination.createPagingSource
 import kotlinx.coroutines.launch
 
 data class ProductsState(
-    val movies : PagingData<MovieEntity> = PagingData(),
+    val movies : PagingData<Product> = PagingData(),
 )
 
 class ProductsViewModel(
@@ -19,7 +19,7 @@ class ProductsViewModel(
     val pager = createPagingSource { pageNumber ->
         val response = getAllProductsUseCase(pageNumber)
         PagedFetchResponse(
-            items = response.movieDetailApi,
+            items = response.content,
             currentPage = pageNumber,
             totalPages = response.totalPages,
         )
