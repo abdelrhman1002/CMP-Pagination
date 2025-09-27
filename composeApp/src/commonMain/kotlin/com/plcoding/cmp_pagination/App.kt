@@ -1,7 +1,9 @@
 package com.plcoding.cmp_pagination
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -9,7 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -25,60 +27,64 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.plcoding.cmp_pagination.pagination.Pager
 import kotlinx.coroutines.flow.distinctUntilChanged
 
 @Composable
 fun App() {
     MaterialTheme {
-        val viewModel = viewModel(
-            initializer = {
-                ProductsViewModel(
-                    getAllProductsUseCase = GetAllProductsUseCase(),
-                )
-            }
-        )
+        val viewModel = viewModel {
+            ProductsViewModel(
+                getAllProductsUseCase = GetAllProductsUseCase(),
+            )
+        }
         val state by viewModel.state.collectAsStateWithLifecycle()
 
         Scaffold(
-            modifier = Modifier
-                .fillMaxSize()
+            modifier = Modifier.fillMaxSize()
         ) { contentPadding ->
             val lazyListState = rememberLazyListState()
 
             lazyListState.LoadMoreOnScroll(
-                hasMore = state.movies.hasMore,
-                isLoading = state.movies.isLoading,
+                pager = viewModel.pager,
                 loadNextPage = { viewModel.loadNextPage() },
             )
 
             LazyColumn(
                 state = lazyListState,
-                modifier = Modifier
-                    .fillMaxSize(),
+                modifier = Modifier.fillMaxSize(),
                 contentPadding = contentPadding
             ) {
-                items(state.movies.items) { movie ->
+                itemsIndexed(state.movies.items) { index  , movie->
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(16.dp)
                     ) {
                         Text(
-                            text = movie.overview,
+                            text = movie.releaseDate,
                             fontSize = 18.sp
                         )
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "$ ${movie.releaseDate}"
-                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Items: ${state.movies.items.size - index}"
+                            )
+                            Text(
+                                text = "Items: $index"
+                            )
+                        }
                     }
                 }
 
-                if(state.movies.isLoading) {
+                if (state.movies.isLoading) {
                     item {
                         Box(
-                            modifier = Modifier
-                                .fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth(),
                             contentAlignment = Alignment.Center
                         ) {
                             CircularProgressIndicator()
@@ -88,27 +94,26 @@ fun App() {
             }
         }
     }
+
 }
 
 
-
 @Composable
-fun  LazyListState.LoadMoreOnScroll(
-    hasMore: Boolean,
-    isLoading: Boolean,
+fun <T : Any> LazyListState.LoadMoreOnScroll(
+    pager: Pager<Int, T>,
     loadNextPage: suspend () -> Unit,
-    buffer: Int = 0
 ) {
     LaunchedEffect(this) {
         snapshotFlow {
-            val layoutInfo = this@LoadMoreOnScroll.layoutInfo
+            val layoutInfo = layoutInfo
             val totalItems = layoutInfo.totalItemsCount
-            val lastVisibleIndex = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-            lastVisibleIndex >= totalItems - buffer
+            val lastVisibleItemIndex = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+
+            lastVisibleItemIndex to totalItems
         }
             .distinctUntilChanged()
-            .collect { shouldLoadMore ->
-                if (shouldLoadMore && hasMore && !isLoading) {
+            .collect { (lastVisible, total) ->
+                if (pager.shouldLoadMore(lastVisible, total)) {
                     loadNextPage()
                 }
             }

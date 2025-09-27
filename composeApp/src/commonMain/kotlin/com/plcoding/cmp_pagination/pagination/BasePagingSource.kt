@@ -2,9 +2,7 @@ package com.plcoding.cmp_pagination.pagination
 
 abstract class BasePagingSource<T : Any> : PagingSource<Int, T>() {
 
-    override fun getRefreshKey(state: PagingData<T>): Int? {
-        return null
-    }
+    override fun getRefreshKey(state: PagingData<T>): Int? = null
 
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, T> {
         return try {
@@ -26,7 +24,6 @@ abstract class BasePagingSource<T : Any> : PagingSource<Int, T>() {
     abstract suspend fun onFetchPage(pageNumber: Int): PagedFetchResponse<T>
 
     companion object {
-        const val PAGING_PAGE_SIZE = 10
         const val FIRST_PAGE = 1
     }
 }
@@ -35,11 +32,6 @@ fun <T : Any> createPagingSource(
     block: suspend (pageNumber: Int) -> PagedFetchResponse<T>
 ): Pager<Int, T> {
     return Pager(
-        config = PagingConfig(
-            pageSize = BasePagingSource.PAGING_PAGE_SIZE,
-            enablePlaceholders = false,
-            prefetchDistance = 3
-        ),
         pagingSourceFactory = {
             object : BasePagingSource<T>() {
                 override suspend fun onFetchPage(pageNumber: Int): PagedFetchResponse<T> {

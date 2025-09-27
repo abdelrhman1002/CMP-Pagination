@@ -16,7 +16,7 @@ class ProductsViewModel(
     initialState = ProductsState()
 ) {
 
-    private val pager = createPagingSource { pageNumber ->
+    val pager = createPagingSource { pageNumber ->
         val response = getAllProductsUseCase(pageNumber)
         PagedFetchResponse(
             items = response.movieDetailApi,
@@ -29,26 +29,22 @@ class ProductsViewModel(
         loadMovies()
     }
 
-    fun loadMovies() {
+    private fun loadMovies() {
         tryToCollect(
             block = { pager.flow },
             onCollect = { pagingData ->
-                updateState {
-                    copy(
-                        movies = pagingData,
-                    )
-                }
+                updateState { copy(movies = pagingData) }
             },
             onError = { exception ->
                 updateState {
-                    copy(
-                        movies = movies.copy(
-                            error = exception
-                        )
-                    )
+                    copy(movies = movies.copy(error = exception, isLoading = false))
                 }
             }
         )
+
+        viewModelScope.launch {
+            pager.load()
+        }
     }
 
     fun loadNextPage() {
@@ -56,7 +52,14 @@ class ProductsViewModel(
             pager.load()
         }
     }
+
+    fun refresh() {
+        viewModelScope.launch {
+            pager.refresh()
+        }
+    }
 }
+
 
 sealed class ProductsEffect {
     object NavigateToAddDukanScreen : ProductsEffect()
